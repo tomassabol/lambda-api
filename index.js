@@ -5,7 +5,15 @@ const RESPONSE = require('./lib/response');
 const UTILS = require('./lib/utils');
 const LOGGER = require('./lib/logger');
 const S3 = () => require('./lib/s3-service');
-const { ConfigurationError, ApiError } = require('./lib/errors');
+const {
+  ConfigurationError,
+  ApiError,
+  ErrorWithDetails,
+  RouteError,
+  MethodError,
+  ResponseError,
+  FileError,
+} = require('./lib/errors');
 const prettyPrint = require('./lib/prettyPrint');
 
 class API {
@@ -543,7 +551,32 @@ class API {
   }
 } // end API class
 
+// Toolkit exports
+const toolkit = require('./lib/toolkit');
+
 // Export the API class as a new instance
-module.exports = (opts) => new API(opts);
+const createAPI = (opts) => new API(opts);
+
+module.exports = createAPI;
 // Add createAPI as default export (to match index.d.ts)
-module.exports.default = module.exports;
+module.exports.default = createAPI;
+
+// Export toolkit functions
+module.exports.createApiHandler = toolkit.createApiHandler;
+module.exports.createDefaultApiStack = toolkit.createDefaultApiStack;
+module.exports.createApiErrorHandler = toolkit.createApiErrorHandler;
+module.exports.addCorsHeaders = toolkit.addCorsHeaders;
+module.exports.sendErrorResponse = toolkit.sendErrorResponse;
+module.exports.extractProxyPath = toolkit.extractProxyPath;
+module.exports.prettyPrintResponse = toolkit.prettyPrintResponse;
+module.exports.logger = toolkit.logger;
+module.exports.noLogger = toolkit.noLogger;
+
+// Export error classes
+module.exports.ApiError = ApiError;
+module.exports.ErrorWithDetails = ErrorWithDetails;
+module.exports.RouteError = RouteError;
+module.exports.MethodError = MethodError;
+module.exports.ConfigurationError = ConfigurationError;
+module.exports.ResponseError = ResponseError;
+module.exports.FileError = FileError;

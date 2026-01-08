@@ -18,6 +18,18 @@ import {
   ResponseError,
   FileError,
   ApiError,
+  ErrorWithDetails,
+  ILogger,
+  createApiHandler,
+  createDefaultApiStack,
+  createApiErrorHandler,
+  addCorsHeaders,
+  sendErrorResponse,
+  extractProxyPath,
+  prettyPrintResponse,
+  logger,
+  noLogger,
+  Routes,
 } from './index';
 import {
   APIGatewayProxyEvent,
@@ -261,8 +273,79 @@ expectType<string>(fileError.message);
 expectType<string>(fileError.name);
 expectType<string | undefined>(fileError.stack);
 
-const apiError = new ApiError('Api error', 500);
+const apiError = new ApiError(500, 'Api error', { field: 'value' });
 expectType<ApiError>(apiError);
 expectType<string>(apiError.message);
-expectType<number | undefined>(apiError.code);
-expectType<any>(apiError.detail);
+expectType<number>(apiError.statusCode);
+expectType<any>(apiError.details);
+
+// Toolkit types
+const errorWithDetails = new ErrorWithDetails('Error with details', {
+  field: 'value',
+});
+expectType<ErrorWithDetails>(errorWithDetails);
+expectType<string>(errorWithDetails.message);
+expectType<any>(errorWithDetails.details);
+
+expectType<ILogger>(logger);
+expectType<ILogger>(noLogger);
+
+const routes: Routes = (api: API) => {
+  api.get('/test', handler);
+};
+expectType<Routes>(routes);
+
+const lambdaHandler = createApiHandler(routes);
+expectType<(event: APIGatewayProxyEvent, context: Context) => Promise<any>>(
+  lambdaHandler,
+);
+
+const lambdaHandlerWithOptions = createApiHandler([routes], {
+  logger: console,
+  apiStack: null,
+});
+expectType<(event: APIGatewayProxyEvent, context: Context) => Promise<any>>(
+  lambdaHandlerWithOptions,
+);
+
+const defaultStack = createDefaultApiStack();
+expectType<(api: API) => void>(defaultStack);
+
+const customStackWithLogger = createDefaultApiStack(console);
+expectType<(api: API) => void>(customStackWithLogger);
+
+const errorHandler = createApiErrorHandler();
+expectType<ErrorHandlingMiddleware>(errorHandler);
+
+const errorHandlerWithLogger = createApiErrorHandler(console);
+expectType<ErrorHandlingMiddleware>(errorHandlerWithLogger);
+
+// Test addCorsHeaders
+const testApi = {} as API;
+addCorsHeaders(testApi);
+addCorsHeaders(testApi, { addOptionsMethod: true });
+
+// Test sendErrorResponse
+sendErrorResponse({
+  req: {} as Request,
+  res: {} as Response,
+  message: 'Error message',
+  statusCode: 400,
+  details: { field: 'value' },
+});
+
+// Test extractProxyPath
+const proxyPath = extractProxyPath({
+  resource: '/api/{proxy+}',
+  path: '/api/users',
+  pathParameters: { proxy: 'users' },
+});
+expectType<string>(proxyPath);
+
+// Test prettyPrintResponse
+const prettyResponse = prettyPrintResponse(
+  { statusCode: 200, body: '{}', isBase64Encoded: false },
+  { httpMethod: 'GET', path: '/test', body: null },
+  { maxBodyLength: 1000, showHeaders: true },
+);
+expectType<any>(prettyResponse);

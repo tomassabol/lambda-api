@@ -362,16 +362,16 @@ describe('Error Handling Tests:', function () {
     });
 
     it('ApiError properties', function () {
-      const error = new errors.ApiError('test message', 403, { foo: 'bar' });
+      const error = new errors.ApiError(403, 'test message', { foo: 'bar' });
       expect(error.name).toBe('ApiError');
       expect(error.message).toBe('test message');
-      expect(error.code).toBe(403);
-      expect(error.detail).toEqual({ foo: 'bar' });
+      expect(error.statusCode).toBe(403);
+      expect(error.details).toEqual({ foo: 'bar' });
     });
 
-    it('ApiError default code', function () {
-      const error = new errors.ApiError('test message');
-      expect(error.code).toBe(500);
+    it('ApiError default statusCode', function () {
+      const error = new errors.ApiError(undefined, 'test message');
+      expect(error.statusCode).toBe(500);
     });
   })
 

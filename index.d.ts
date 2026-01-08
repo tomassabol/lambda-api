@@ -47,24 +47,24 @@ export declare interface App {
 export declare type Middleware = (
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => void;
 export declare type ErrorHandlingMiddleware = (
   error: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => void;
 export declare type ErrorCallback = (error?: Error) => void;
 export declare type HandlerFunction = (
   req: Request,
   res: Response,
-  next?: NextFunction
+  next?: NextFunction,
 ) => void | any | Promise<any>;
 
 export declare type LoggerFunction = (
   message?: any,
-  additionalInfo?: LoggerFunctionAdditionalInfo
+  additionalInfo?: LoggerFunctionAdditionalInfo,
 ) => void;
 export declare type LoggerFunctionAdditionalInfo =
   | string
@@ -216,7 +216,7 @@ export declare class Response {
   getLink(
     s3Path: string,
     expires?: number,
-    callback?: ErrorCallback
+    callback?: ErrorCallback,
   ): Promise<string>;
 
   send(body: any): void;
@@ -255,13 +255,13 @@ export declare class Response {
     file: string | Buffer,
     fileName?: string,
     options?: FileOptions,
-    callback?: ErrorCallback
+    callback?: ErrorCallback,
   ): void;
 
   sendFile(
     file: string | Buffer,
     options?: FileOptions,
-    callback?: ErrorCallback
+    callback?: ErrorCallback,
   ): Promise<void>;
 }
 
@@ -297,7 +297,7 @@ export declare class API {
     path: string,
     ...middlewaresAndHandler: (Middleware | HandlerFunction)[]
   ): void;
-  delete(...middlewaresAndHandler: HandlerFunction[]): void;
+  delete(...middlewaresAndHandler: (Middleware | HandlerFunction)[]): void;
 
   options(
     path: string,
@@ -329,7 +329,7 @@ export declare class API {
 
   register(
     routes: (api: API, options?: RegisterOptions) => void,
-    options?: RegisterOptions
+    options?: RegisterOptions,
   ): void;
 
   routes(format: true): void;
@@ -345,11 +345,11 @@ export declare class API {
   run(
     event: APIGatewayProxyEvent | APIGatewayProxyEventV2,
     context: Context,
-    cb: (err: Error, result: any) => void
+    cb: (err: Error, result: any) => void,
   ): void;
   run(
     event: APIGatewayProxyEvent | APIGatewayProxyEventV2,
-    context: Context
+    context: Context,
   ): Promise<any>;
 }
 
@@ -369,16 +369,126 @@ export declare class ResponseError extends Error {
   constructor(message: string, code: number);
 }
 
-export declare class ApiError extends Error {
-  constructor(message: string, code?: number, detail?: any);
+export declare class ApiError extends ErrorWithDetails {
+  constructor(statusCode: number, message: string, details?: any);
   name: 'ApiError';
-  code?: number;
-  detail?: any;
+  statusCode: number;
 }
 
 export declare class FileError extends Error {
   constructor(message: string, err: object);
 }
+
+export declare class ErrorWithDetails extends Error {
+  constructor(message: string, details?: any);
+  details?: any;
+}
+
+// Toolkit Types
+
+export declare interface ILogger {
+  debug(message?: any, ...optionalParams: any[]): void;
+  info(message?: any, ...optionalParams: any[]): void;
+  error(message?: any, ...optionalParams: any[]): void;
+  warn(message?: any, ...optionalParams: any[]): void;
+}
+
+export declare interface CreateApiHandlerOptions {
+  /**
+   * Optional routes to define the stack (error handling, cors, etc..),
+   * By default the cors + error handler is installed.
+   * Use apiStack = null to disable default stack or provide specific stack.
+   *
+   * @default defaultApiStack
+   */
+  apiStack?: ((api: API, options?: RegisterOptions) => void) | null;
+  /** Optional logger */
+  logger?: ILogger;
+  /** Logger options for createAPI function */
+  loggerOptions?: LoggerOptions;
+  /** Additional options for createAPI function */
+  apiOptions?: Options;
+}
+
+export declare interface CorsOptions2 {
+  addOptionsMethod?: boolean;
+}
+
+export declare interface SendErrorResponseParams {
+  req: Request;
+  res: Response;
+  message: string;
+  statusCode?: number;
+  details?: unknown;
+}
+
+export declare interface PrettyPrintOptions {
+  maxBodyLength?: number;
+  showHeaders?: boolean;
+}
+
+export type Routes = (api: API, options?: RegisterOptions) => void;
+
+/**
+ * Create handler for Lambda API proxy integration
+ */
+export declare function createApiHandler(
+  routes: Routes | Routes[] | readonly Routes[],
+  options?: CreateApiHandlerOptions,
+): (event: APIGatewayProxyEvent, context: Context) => Promise<any>;
+
+/**
+ * Default API middleware stack.
+ * Enables adding CORS headers and handling of errors.
+ */
+export declare function createDefaultApiStack(
+  logger?: ILogger,
+): (api: API) => void;
+
+/**
+ * Handle errors with support for default lambda-api errors, ApiError and ErrorWithDetails.
+ */
+export declare function createApiErrorHandler(
+  logger?: ILogger,
+): ErrorHandlingMiddleware;
+
+/**
+ * Add API middleware for CORS support
+ */
+export declare function addCorsHeaders(api: API, options?: CorsOptions2): void;
+
+/**
+ * Send http error response using lambda-api response object.
+ */
+export declare function sendErrorResponse(
+  params: SendErrorResponseParams,
+): void;
+
+/**
+ * Extract proxy path from API Gateway proxy event
+ */
+export declare function extractProxyPath(
+  event: Pick<APIGatewayProxyEvent, 'resource' | 'path' | 'pathParameters'>,
+): string;
+
+/**
+ * Pretty print API response.
+ */
+export declare function prettyPrintResponse(
+  response: any,
+  event: { httpMethod: string; path: string; body?: string | null },
+  options?: PrettyPrintOptions,
+): any;
+
+/**
+ * CloudWatch logger (console or noLogger during tests)
+ */
+export declare const logger: ILogger;
+
+/**
+ * Empty logger used to disable logging for unit tests.
+ */
+export declare const noLogger: ILogger;
 
 declare function createAPI(options?: Options): API;
 
